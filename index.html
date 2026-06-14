@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ContractCalc — Position Size Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:          #1a1d21;
+  --card:        #1e2025;
+  --panel:       #252830;
+  --panel2:      #2a2d33;
+  --border:      #3a3d42;
+  --border-dim:  rgba(58,61,66,0.5);
+  --orange:      #e67e22;
+  --orange-dim:  rgba(230,126,34,0.12);
+  --orange-glow: rgba(230,126,34,0.25);
+  --green:       #51cf66;
+  --red:         #ff6b6b;
+  --amber:       #f0a500;
+  --blue:        #4dabf7;
+  --teal:        #1abc9c;
+  --text:        #d4d8e0;
+  --text-dim:    #7a8090;
+  --text-bright: #f0f2f5;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+
+html { overflow-x: hidden; scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13px; min-height: 100vh; }
+
+/* ── Header ── */
+#header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex;
+  align-items: stretch;
+  height: 52px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  border-right: 1px solid var(--border);
+  padding-right: 20px; margin-right: 4px;
+  flex-shrink: 0;
+}
+.brand-name {
+  font-family: var(--mono); font-size: 15px; font-weight: 700;
+  color: var(--orange); letter-spacing: -0.01em;
+}
+.brand-tag {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  color: var(--text-dim); letter-spacing: 0.06em; text-transform: uppercase;
+  border: 1px solid var(--border); border-radius: 3px; padding: 2px 7px;
+}
+.header-right {
+  display: flex; align-items: center; gap: 10px; margin-left: auto;
+}
+.kofi-btn {
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  background: transparent;
+  color: var(--orange);
+  border: 1px solid rgba(230,126,34,0.4);
+  border-radius: 5px; padding: 6px 12px;
+  text-decoration: none; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.kofi-btn:hover { background: var(--orange-dim); border-color: var(--orange); }
+.kofi-btn svg { flex-shrink: 0; }
+
+/* ── Page ── */
+#page { max-width: 980px; margin: 0 auto; padding: 28px 20px 80px; }
+
+/* ── Hero blurb ── */
+.hero {
+  margin-bottom: 28px;
+}
+.hero h1 {
+  font-family: var(--mono); font-size: 22px; font-weight: 700;
+  color: var(--text-bright); letter-spacing: -0.02em; margin-bottom: 6px;
+}
+.hero h1 span { color: var(--orange); }
+.hero p { font-size: 13px; color: var(--text-dim); max-width: 560px; line-height: 1.6; }
+
+/* ── Instrument Selector ── */
+.selector-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 640px) { .selector-grid { grid-template-columns: 1fr; } }
+
+.selector-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+}
+.selector-header {
+  background: var(--panel); border-bottom: 1px solid var(--border);
+  padding: 10px 16px; display: flex; align-items: center; gap: 8px;
+}
+.selector-header-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-dim);
+}
+.selector-header-label span { color: var(--orange); }
+.selector-body { padding: 14px 16px; }
+.instrument-grid {
+  display: flex; flex-wrap: wrap; gap: 7px;
+}
+.inst-btn {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  background: var(--panel2); color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: 6px 11px; cursor: pointer;
+  transition: all 0.12s; white-space: nowrap; letter-spacing: 0.03em;
+}
+.inst-btn:hover { color: var(--text-bright); border-color: rgba(230,126,34,0.5); background: var(--orange-dim); }
+.inst-btn.active {
+  background: var(--orange-dim); color: var(--orange);
+  border-color: var(--orange); box-shadow: 0 0 0 1px rgba(230,126,34,0.2);
+}
+.inst-btn .sub { font-size: 9px; color: var(--text-dim); display: block; font-weight: 400; margin-top: 1px; }
+.inst-btn.active .sub { color: rgba(230,126,34,0.7); }
+
+/* ── Forex sub-options (lot size, account currency) ── */
+.forex-opts {
+  display: none; margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--border-dim);
+  gap: 12px; flex-wrap: wrap; align-items: flex-end;
+}
+.forex-opts.visible { display: flex; }
+.forex-opt-group { display: flex; flex-direction: column; gap: 5px; }
+.forex-opt-group label {
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+}
+.toggle-row { display: flex; gap: 5px; }
+.toggle-btn {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  background: var(--panel2); color: var(--text-dim);
+  border: 1px solid var(--border); border-radius: 4px; padding: 5px 10px;
+  cursor: pointer; transition: all 0.12s;
+}
+.toggle-btn.active { background: var(--orange-dim); color: var(--orange); border-color: var(--orange); }
+
+/* ── Active instrument display ── */
+#active-display {
+  display: none;
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  padding: 14px 18px; margin-bottom: 20px;
+  align-items: center; gap: 16px; flex-wrap: wrap;
+}
+#active-display.visible { display: flex; }
+.active-name {
+  font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--orange);
+}
+.active-meta { display: flex; gap: 14px; flex-wrap: wrap; }
+.active-badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+  padding: 4px 10px; color: var(--text-dim); white-space: nowrap;
+}
+.active-badge span { color: var(--text-bright); }
+
+/* ── Calculator ── */
+.calc-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; margin-bottom: 20px;
+  display: none;
+}
+.calc-card.visible { display: block; }
+.calc-header {
+  background: var(--panel); border-bottom: 1px solid var(--border);
+  padding: 11px 20px; display: flex; align-items: center; gap: 8px;
+}
+.calc-header-title {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim);
+}
+.calc-header-title span { color: var(--orange); }
+.calc-body { padding: 24px 20px; }
+
+/* ── Input grid ── */
+.input-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+@media (max-width: 560px) { .input-grid { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim);
+}
+.field input, .field select {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text-bright); font-family: var(--mono); font-size: 20px; font-weight: 700;
+  padding: 12px 14px; width: 100%; outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: none; -webkit-appearance: none;
+}
+.field select { font-size: 14px; cursor: pointer; }
+.field input:focus, .field select:focus { border-color: var(--orange); box-shadow: 0 0 0 2px rgba(230,126,34,0.15); }
+.field input::placeholder { color: var(--border); font-weight: 400; font-size: 16px; }
+.field .hint { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+.field .pv-auto {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--teal); background: rgba(26,188,156,0.08);
+  border: 1px solid rgba(26,188,156,0.2); border-radius: 4px;
+  padding: 3px 8px; display: inline-block; margin-top: 2px;
+}
+/* read-only pv field */
+.field input[readonly] {
+  color: var(--teal); border-color: rgba(26,188,156,0.3);
+  background: rgba(26,188,156,0.05); font-size: 16px; font-weight: 600; cursor: default;
+}
+
+/* ── Divider between SL and TP sections ── */
+.section-divider {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+}
+.section-divider-line { flex: 1; height: 1px; background: var(--border-dim); }
+.section-divider-label {
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ── Output strip ── */
+.output-strip {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+@media (max-width: 700px) { .output-strip { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 400px) { .output-strip { grid-template-columns: 1fr; } }
+.out-box {
+  background: var(--panel); padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.out-label {
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.09em; color: var(--text-dim);
+}
+.out-value {
+  font-family: var(--mono); font-weight: 700; color: var(--text-bright); line-height: 1;
+}
+.out-value.big   { font-size: 48px; color: var(--orange); }
+.out-value.med   { font-size: 28px; }
+.out-value.empty { color: var(--border) !important; }
+.out-sub { font-family: var(--mono); font-size: 10px; color: var(--text-dim); margin-top: 3px; }
+
+/* ── TP output strip ── */
+.tp-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid rgba(81,207,102,0.25);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+@media (max-width: 560px) { .tp-strip { grid-template-columns: 1fr; } }
+.tp-box {
+  background: rgba(81,207,102,0.04); padding: 14px 18px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+/* ── Warning ── */
+.risk-warning {
+  display: none; background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.3);
+  border-radius: 6px; padding: 10px 14px; margin-bottom: 18px;
+  font-family: var(--mono); font-size: 11px; color: var(--red); line-height: 1.5;
+}
+
+/* ── Reference table ── */
+.ref-wrap { overflow-x: auto; }
+.ref-table { width: 100%; border-collapse: collapse; min-width: 380px; }
+.ref-table th {
+  background: var(--panel); font-family: var(--mono); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim);
+  padding: 8px 14px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.ref-table th:first-child { text-align: left; }
+.ref-table td {
+  font-family: var(--mono); font-size: 12px; padding: 8px 14px;
+  border-bottom: 1px solid var(--border-dim); text-align: right; color: var(--text);
+}
+.ref-table td:first-child { text-align: left; color: var(--amber); font-weight: 700; }
+.ref-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+.ref-table tbody tr:last-child td { border-bottom: none; }
+.ref-table tr.row-highlight td { background: rgba(230,126,34,0.07) !important; }
+.ref-table tr.row-highlight td:not(:first-child) { color: var(--orange); font-weight: 700; }
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 60px 20px; text-align: center; gap: 12px;
+}
+.empty-icon { font-size: 40px; opacity: 0.3; }
+.empty-title { font-family: var(--mono); font-size: 14px; font-weight: 700; color: var(--text-dim); }
+.empty-sub { font-size: 12px; color: var(--text-dim); opacity: 0.7; max-width: 300px; line-height: 1.5; }
+
+/* ── Footer ── */
+#footer {
+  background: var(--card); border-top: 1px solid var(--border);
+  padding: 16px 24px; text-align: center;
+  font-family: var(--mono); font-size: 10px; color: var(--text-dim);
+}
+#footer a { color: var(--orange); text-decoration: none; }
+#footer a:hover { text-decoration: underline; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--card); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div id="header">
+  <div class="brand">
+    <div class="brand-name">ContractCalc</div>
+    <div class="brand-tag">FREE TOOL</div>
+  </div>
+  <div class="header-right">
+    <a class="kofi-btn" href="https://ko-fi.com/juiced_" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/>
+        <line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/>
+      </svg>
+      Buy me a coffee
+    </a>
+  </div>
+</div>
+
+<!-- ── Page ── -->
+<div id="page">
+
+  <div class="hero">
+    <h1>Position Size <span>Calculator</span></h1>
+    <p>Select a futures contract or forex pair, enter your stop loss distance and risk, and get your contract/lot size instantly. Free, no signup required.</p>
+  </div>
+
+  <!-- ── Instrument Selector ── -->
+  <div class="selector-grid">
+
+    <!-- Futures -->
+    <div class="selector-card">
+      <div class="selector-header">
+        <div class="selector-header-label"><span>Futures</span> Contracts</div>
+      </div>
+      <div class="selector-body">
+        <div class="instrument-grid" id="futures-grid"></div>
+      </div>
+    </div>
+
+    <!-- Forex -->
+    <div class="selector-card">
+      <div class="selector-header">
+        <div class="selector-header-label"><span>Forex</span> &amp; Metals</div>
+      </div>
+      <div class="selector-body">
+        <div class="instrument-grid" id="forex-grid"></div>
+        <!-- Forex sub-options -->
+        <div class="forex-opts" id="forex-opts">
+          <div class="forex-opt-group">
+            <label>Lot Size</label>
+            <div class="toggle-row" id="lot-toggle">
+              <button class="toggle-btn active" data-lot="100000">Standard</button>
+              <button class="toggle-btn" data-lot="10000">Mini</button>
+              <button class="toggle-btn" data-lot="1000">Micro</button>
+            </div>
+          </div>
+          <div class="forex-opt-group">
+            <label>Account Currency</label>
+            <div class="toggle-row" id="acct-toggle">
+              <button class="toggle-btn active" data-acct="USD">USD</button>
+              <button class="toggle-btn" data-acct="GBP">GBP</button>
+              <button class="toggle-btn" data-acct="EUR">EUR</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Active instrument display ── -->
+  <div id="active-display">
+    <div class="active-name" id="ad-name">—</div>
+    <div class="active-meta" id="ad-meta"></div>
+  </div>
+
+  <!-- ── Calculator (shown once instrument selected) ── -->
+  <div class="calc-card" id="calc-card">
+    <div class="calc-header">
+      <div class="calc-header-title">Risk Calculator — <span id="ch-title">Select an instrument</span></div>
+    </div>
+    <div class="calc-body">
+
+      <!-- Inputs -->
+      <div class="input-grid">
+        <div class="field">
+          <label>Stop Loss Distance</label>
+          <input type="number" id="i-sl" min="0" step="any" placeholder="0" oninput="calc()" autofocus>
+          <span class="hint" id="sl-hint">Points / pips from entry to stop</span>
+        </div>
+        <div class="field">
+          <label>Max Dollars to Risk ($)</label>
+          <input type="number" id="i-risk" min="0" step="1" value="200" oninput="calc()">
+          <span class="hint">Max dollars you want to risk</span>
+        </div>
+        <div class="field">
+          <label id="pv-label">Point Value ($)</label>
+          <input type="number" id="i-pv" min="0" step="any" oninput="calc()" placeholder="auto">
+          <span class="hint pv-auto" id="pv-auto-tag" style="display:none;">Auto-set from instrument</span>
+          <span class="hint" id="pv-hint"></span>
+        </div>
+      </div>
+
+      <!-- Warning -->
+      <div class="risk-warning" id="risk-warning"></div>
+
+      <!-- SL Outputs -->
+      <div class="output-strip">
+        <div class="out-box">
+          <div class="out-label" id="o-contracts-label">Contracts</div>
+          <div class="out-value big empty" id="o-contracts">—</div>
+          <div class="out-sub" id="o-contracts-sub"></div>
+        </div>
+        <div class="out-box">
+          <div class="out-label">Actual Risk</div>
+          <div class="out-value med empty" id="o-risk">—</div>
+          <div class="out-sub" id="o-risk-sub"></div>
+        </div>
+        <div class="out-box">
+          <div class="out-label" id="o-dpp-label">$ / Point</div>
+          <div class="out-value med empty" id="o-dpp">—</div>
+          <div class="out-sub" id="o-dpp-sub"></div>
+        </div>
+        <div class="out-box">
+          <div class="out-label">Risk %</div>
+          <div class="out-value med empty" id="o-pct">—</div>
+          <div class="out-sub" id="o-pct-sub">of max risk</div>
+        </div>
+      </div>
+
+      <!-- ── Take Profit Section ── -->
+      <div class="section-divider">
+        <div class="section-divider-line"></div>
+        <div class="section-divider-label">Take Profit / R:R</div>
+        <div class="section-divider-line"></div>
+      </div>
+
+      <div class="input-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 18px;">
+        <div class="field">
+          <label>Take Profit Distance</label>
+          <input type="number" id="i-tp" min="0" step="any" placeholder="0" oninput="calc()">
+          <span class="hint" id="tp-hint">Points / pips from entry to target</span>
+        </div>
+        <div class="field">
+          <label>Account Size ($) <span style="font-weight:400;color:var(--text-dim);font-size:9px;">optional</span></label>
+          <input type="number" id="i-acct" min="0" step="100" placeholder="optional" oninput="calc()">
+          <span class="hint">Used to calculate % risk</span>
+        </div>
+      </div>
+
+      <!-- TP Outputs -->
+      <div class="tp-strip" id="tp-strip">
+        <div class="tp-box">
+          <div class="out-label" style="color:rgba(81,207,102,0.6);">R:R Ratio</div>
+          <div class="out-value med empty" id="o-rr" style="color:var(--green);">—</div>
+          <div class="out-sub" id="o-rr-sub"></div>
+        </div>
+        <div class="tp-box">
+          <div class="out-label" style="color:rgba(81,207,102,0.6);">Profit Target</div>
+          <div class="out-value med empty" id="o-profit" style="color:var(--green);">—</div>
+          <div class="out-sub" id="o-profit-sub"></div>
+        </div>
+        <div class="tp-box">
+          <div class="out-label" style="color:rgba(81,207,102,0.6);">Breakeven Move</div>
+          <div class="out-value med empty" id="o-be" style="color:var(--green);">—</div>
+          <div class="out-sub" id="o-be-sub"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Reference Table ── -->
+  <div class="calc-card" id="ref-card">
+    <div class="calc-header">
+      <div class="calc-header-title">Quick Reference — <span id="ref-title">Risk per unit</span></div>
+    </div>
+    <div class="calc-body" style="padding: 0;">
+      <div class="ref-wrap">
+        <table class="ref-table">
+          <thead id="ref-thead"></thead>
+          <tbody id="ref-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty state (shown before any instrument selected) -->
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon">📐</div>
+    <div class="empty-title">Select an instrument above</div>
+    <div class="empty-sub">Choose a futures contract or forex pair to load the position size calculator.</div>
+  </div>
+
+</div>
+
+<!-- ── Footer ── -->
+<div id="footer">
+  ContractCalc — free forever · no signup · no ads ·
+  <a href="https://ko-fi.com/juiced_" target="_blank" rel="noopener">☕ Buy me a coffee if it saved you a bad trade</a>
+</div>
+
+<script>
+// ════════════════════════════════════════════════
+// INSTRUMENT DATA
+// ════════════════════════════════════════════════
+
+const FUTURES = [
+  // Equity indices
+  { id:'NQ',   name:'NQ',   full:'Nasdaq-100 Futures',        cat:'Indices',  pv:20,    unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[10,20,30,40,50,75,100,150,200] },
+  { id:'MNQ',  name:'MNQ',  full:'Micro Nasdaq-100',          cat:'Indices',  pv:2,     unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[10,20,30,40,50,75,100,150,200] },
+  { id:'ES',   name:'ES',   full:'S&P 500 Futures',           cat:'Indices',  pv:50,    unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[2,4,6,8,10,15,20,30,50] },
+  { id:'MES',  name:'MES',  full:'Micro S&P 500',             cat:'Indices',  pv:5,     unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[2,4,6,8,10,15,20,30,50] },
+  { id:'RTY',  name:'RTY',  full:'Russell 2000 Futures',      cat:'Indices',  pv:50,    unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[2,4,6,8,10,15,20,25] },
+  { id:'M2K',  name:'M2K',  full:'Micro Russell 2000',        cat:'Indices',  pv:5,     unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[2,4,6,8,10,15,20,25] },
+  { id:'YM',   name:'YM',   full:'Dow Jones Futures',         cat:'Indices',  pv:5,     unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[10,20,30,50,75,100,150,200] },
+  { id:'MYM',  name:'MYM',  full:'Micro Dow Jones',           cat:'Indices',  pv:0.5,   unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[10,20,30,50,75,100,150,200] },
+  // Energy
+  { id:'CL',   name:'CL',   full:'Crude Oil Futures',         cat:'Energy',   pv:1000,  unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[0.1,0.25,0.5,0.75,1,1.5,2,3] },
+  { id:'MCL',  name:'MCL',  full:'Micro Crude Oil',           cat:'Energy',   pv:100,   unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[0.1,0.25,0.5,0.75,1,1.5,2,3] },
+  { id:'NG',   name:'NG',   full:'Natural Gas Futures',       cat:'Energy',   pv:10000, unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[0.01,0.02,0.05,0.1,0.15,0.2] },
+  // Metals
+  { id:'GC',   name:'GC',   full:'Gold Futures',              cat:'Metals',   pv:100,   unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[1,2,3,5,7,10,15,20] },
+  { id:'MGC',  name:'MGC',  full:'Micro Gold',                cat:'Metals',   pv:10,    unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[1,2,3,5,7,10,15,20] },
+  { id:'SI',   name:'SI',   full:'Silver Futures',            cat:'Metals',   pv:5000,  unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[0.05,0.1,0.2,0.3,0.5,0.75,1] },
+  { id:'SIL',  name:'SIL',  full:'Micro Silver',              cat:'Metals',   pv:1000,  unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[0.05,0.1,0.2,0.3,0.5,0.75,1] },
+  // Bonds
+  { id:'ZB',   name:'ZB',   full:'30-Year T-Bond',            cat:'Bonds',    pv:1000,  unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[0.5,1,1.5,2,3,4,5] },
+  { id:'ZN',   name:'ZN',   full:'10-Year T-Note',            cat:'Bonds',    pv:1000,  unit:'contract', slUnit:'pts', refLabel:'SL (pts)', refRows:[0.25,0.5,0.75,1,1.5,2,3] },
+  // Currencies (futures)
+  { id:'6E',   name:'6E',   full:'Euro FX Futures',           cat:'FX',       pv:1250,  unit:'contract', slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'6B',   name:'6B',   full:'British Pound Futures',     cat:'FX',       pv:625,   unit:'contract', slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'6J',   name:'6J',   full:'Japanese Yen Futures',      cat:'FX',       pv:1250,  unit:'contract', slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+];
+
+// Forex pip values are per standard lot (100,000 units), USD account
+// For pairs where USD is quote: pip = 0.0001 * 100,000 = $10
+// For pairs where USD is base (USDXXX): pip ≈ varies; approximated
+// For JPY pairs: pip = 0.01 * 100,000 / rate — we use ~$9.09 at ~110 rate (approximate, standard)
+// For metals (XAU/XAG): pip = $1 per lot per $1 move on XAU, 0.01 on XAG
+
+const FOREX = [
+  // Majors
+  { id:'EURUSD', name:'EUR/USD', full:'Euro / US Dollar',           cat:'Majors', pipValue:10,    pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'GBPUSD', name:'GBP/USD', full:'British Pound / US Dollar',  cat:'Majors', pipValue:10,    pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'USDJPY', name:'USD/JPY', full:'US Dollar / Japanese Yen',   cat:'Majors', pipValue:9.09,  pipSize:0.01,   slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'USDCHF', name:'USD/CHF', full:'US Dollar / Swiss Franc',    cat:'Majors', pipValue:10,    pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'AUDUSD', name:'AUD/USD', full:'Australian Dollar / USD',    cat:'Majors', pipValue:10,    pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'NZDUSD', name:'NZD/USD', full:'New Zealand Dollar / USD',   cat:'Majors', pipValue:10,    pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'USDCAD', name:'USD/CAD', full:'US Dollar / Canadian Dollar', cat:'Majors', pipValue:7.69, pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  // Crosses
+  { id:'GBPJPY', name:'GBP/JPY', full:'British Pound / Yen',        cat:'Crosses', pipValue:9.09, pipSize:0.01,   slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100,150] },
+  { id:'EURJPY', name:'EUR/JPY', full:'Euro / Japanese Yen',         cat:'Crosses', pipValue:9.09, pipSize:0.01,   slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100,150] },
+  { id:'EURGBP', name:'EUR/GBP', full:'Euro / British Pound',        cat:'Crosses', pipValue:12.5, pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'GBPAUD', name:'GBP/AUD', full:'British Pound / Aussie',      cat:'Crosses', pipValue:10,   pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100,150] },
+  { id:'GBPCAD', name:'GBP/CAD', full:'British Pound / Canadian',    cat:'Crosses', pipValue:7.69, pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'EURCAD', name:'EUR/CAD', full:'Euro / Canadian Dollar',       cat:'Crosses', pipValue:7.69, pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  { id:'AUDCAD', name:'AUD/CAD', full:'Aussie / Canadian',            cat:'Crosses', pipValue:7.69, pipSize:0.0001, slUnit:'pips', refLabel:'SL (pips)', refRows:[5,10,15,20,30,50,75,100] },
+  // Metals
+  { id:'XAUUSD', name:'XAU/USD', full:'Gold / US Dollar',            cat:'Metals',  pipValue:1,    pipSize:0.01,   slUnit:'pts',  refLabel:'SL (pts)', refRows:[1,2,3,5,7,10,15,20,30] },
+  { id:'XAGUSD', name:'XAG/USD', full:'Silver / US Dollar',          cat:'Metals',  pipValue:50,   pipSize:0.01,   slUnit:'pts',  refLabel:'SL (pts)', refRows:[0.1,0.2,0.5,1,2,3,5] },
+];
+
+// ════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════
+
+let activeInstrument = null;
+let isForex = false;
+let lotSize = 100000;    // standard lot
+let acctCurrency = 'USD';
+
+// ════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════
+
+function fmt$(v, dec=0) {
+  return '$' + v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+function fmtRR(v) {
+  return '1 : ' + v.toFixed(2);
+}
+function lotLabel() {
+  if (lotSize === 100000) return 'Standard lot';
+  if (lotSize === 10000)  return 'Mini lot';
+  return 'Micro lot';
+}
+
+// effective pip value for forex, adjusted for lot size & currency
+// pipValue in FOREX array = per standard lot, USD account
+function effectivePipValue(inst) {
+  if (!isForex) return inst.pv;
+  const lotMultiplier = lotSize / 100000;
+  // currency adjustment (rough): GBP≈0.79, EUR≈0.92 vs USD
+  const ccyAdj = acctCurrency === 'USD' ? 1 : (acctCurrency === 'GBP' ? 0.79 : 0.92);
+  return inst.pipValue * lotMultiplier / ccyAdj;
+}
+
+// ════════════════════════════════════════════════
+// BUILD INSTRUMENT GRIDS
+// ════════════════════════════════════════════════
+
+function buildGrids() {
+  buildFuturesGrid();
+  buildForexGrid();
+}
+
+function buildFuturesGrid() {
+  const el = document.getElementById('futures-grid');
+  let currentCat = '';
+  let html = '';
+  FUTURES.forEach(inst => {
+    if (inst.cat !== currentCat) {
+      if (currentCat) html += '<div style="width:100%;height:0;border-top:1px solid rgba(58,61,66,0.4);margin:4px 0;flex-basis:100%;"></div>';
+      currentCat = inst.cat;
+    }
+    const sub = getPvLabel(inst);
+    html += `<button class="inst-btn" data-id="${inst.id}" data-type="futures" onclick="selectInstrument('${inst.id}', false)">${inst.name}<span class="sub">${sub}</span></button>`;
+  });
+  el.innerHTML = html;
+}
+
+function buildForexGrid() {
+  const el = document.getElementById('forex-grid');
+  let currentCat = '';
+  let html = '';
+  FOREX.forEach(inst => {
+    if (inst.cat !== currentCat) {
+      if (currentCat) html += '<div style="width:100%;height:0;border-top:1px solid rgba(58,61,66,0.4);margin:4px 0;flex-basis:100%;"></div>';
+      currentCat = inst.cat;
+    }
+    const sub = inst.slUnit === 'pts' ? '$'+inst.pipValue+'/pt' : '$'+inst.pipValue+'/pip';
+    html += `<button class="inst-btn" data-id="${inst.id}" data-type="forex" onclick="selectInstrument('${inst.id}', true)">${inst.name}<span class="sub">${sub}</span></button>`;
+  });
+  el.innerHTML = html;
+}
+
+function getPvLabel(inst) {
+  return '$' + inst.pv + '/pt';
+}
+
+// ════════════════════════════════════════════════
+// SELECT INSTRUMENT
+// ════════════════════════════════════════════════
+
+function selectInstrument(id, forex) {
+  isForex = forex;
+  const list = forex ? FOREX : FUTURES;
+  activeInstrument = list.find(i => i.id === id);
+  if (!activeInstrument) return;
+
+  // update button states
+  document.querySelectorAll('.inst-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelector(`.inst-btn[data-id="${id}"]`).classList.add('active');
+
+  // show/hide forex options
+  document.getElementById('forex-opts').classList.toggle('visible', forex);
+
+  // show active display
+  const ad = document.getElementById('active-display');
+  ad.classList.add('visible');
+  document.getElementById('ad-name').textContent = activeInstrument.name;
+
+  const pv = isForex ? effectivePipValue(activeInstrument) : activeInstrument.pv;
+  const pvLabel = isForex
+    ? `$${pv.toFixed(2)} / pip (${lotLabel()}, ${acctCurrency} acct)`
+    : `$${activeInstrument.pv} / point`;
+
+  document.getElementById('ad-meta').innerHTML = `
+    <div class="active-badge"><span>${activeInstrument.full}</span></div>
+    <div class="active-badge">Cat: <span>${activeInstrument.cat}</span></div>
+    <div class="active-badge">Value: <span>${pvLabel}</span></div>
+  `;
+
+  // update calculator header
+  document.getElementById('ch-title').textContent = activeInstrument.name + ' — ' + activeInstrument.full;
+  document.getElementById('ref-title').textContent = `Risk per ${isForex ? 'lot' : 'contract'} (${activeInstrument.name})`;
+
+  // SL unit labels
+  const unit = isForex ? activeInstrument.slUnit || 'pips' : 'points';
+  document.getElementById('sl-hint').textContent = `${unit.charAt(0).toUpperCase()+unit.slice(1)} from entry to stop`;
+  document.getElementById('tp-hint').textContent = `${unit.charAt(0).toUpperCase()+unit.slice(1)} from entry to target`;
+  document.getElementById('o-contracts-label').textContent = isForex ? 'Lots' : 'Contracts';
+  document.getElementById('o-dpp-label').textContent = isForex ? `$ / ${unit}` : '$ / Point';
+  document.getElementById('pv-label').textContent = isForex ? 'Pip Value ($)' : 'Point Value ($)';
+
+  // auto-fill point value
+  const pvInput = document.getElementById('i-pv');
+  pvInput.value = pv.toFixed(pv < 1 ? 4 : 2);
+  pvInput.readOnly = true;
+  document.getElementById('pv-auto-tag').style.display = 'inline-block';
+  document.getElementById('pv-hint').textContent = isForex
+    ? `Approx for ${acctCurrency} acct · ${lotLabel()}`
+    : FUTURES.slice(0,8).map(f=>f.name+'='+f.pv).join(' · ');
+
+  // show cards, hide empty state
+  document.getElementById('calc-card').classList.add('visible');
+  document.getElementById('ref-card').classList.add('visible');
+  document.getElementById('empty-state').style.display = 'none';
+
+  buildRefTable();
+  calc();
+}
+
+// ════════════════════════════════════════════════
+// CALC
+// ════════════════════════════════════════════════
+
+function calc() {
+  const sl     = parseFloat(document.getElementById('i-sl').value);
+  const risk   = parseFloat(document.getElementById('i-risk').value);
+  const pv     = parseFloat(document.getElementById('i-pv').value);
+  const tp     = parseFloat(document.getElementById('i-tp').value);
+  const acctSz = parseFloat(document.getElementById('i-acct').value);
+
+  const cEl   = document.getElementById('o-contracts');
+  const rEl   = document.getElementById('o-risk');
+  const dEl   = document.getElementById('o-dpp');
+  const pEl   = document.getElementById('o-pct');
+  const cSub  = document.getElementById('o-contracts-sub');
+  const rSub  = document.getElementById('o-risk-sub');
+  const dSub  = document.getElementById('o-dpp-sub');
+  const pSub  = document.getElementById('o-pct-sub');
+  const warn  = document.getElementById('risk-warning');
+  const rrEl  = document.getElementById('o-rr');
+  const prEl  = document.getElementById('o-profit');
+  const beEl  = document.getElementById('o-be');
+  const rrSub = document.getElementById('o-rr-sub');
+  const prSub = document.getElementById('o-profit-sub');
+  const beSub = document.getElementById('o-be-sub');
+
+  const clearAll = () => {
+    [cEl, rEl, dEl, pEl, rrEl, prEl, beEl].forEach(e => { e.textContent = '—'; e.className = e.className.replace(/\bempty\b/,'') + ' empty'; });
+    [cSub, rSub, dSub, pSub, rrSub, prSub, beSub].forEach(e => e.textContent = '');
+    warn.style.display = 'none';
+  };
+
+  if (!sl || sl <= 0 || !risk || risk <= 0 || !pv || pv <= 0) { clearAll(); return; }
+
+  const riskPerUnit = sl * pv;
+  const units       = Math.floor(risk / riskPerUnit);
+  const actualRisk  = units * riskPerUnit;
+  const dpp         = units * pv;
+  const unitWord    = isForex ? (units === 1 ? 'lot' : 'lots') : (units === 1 ? 'contract' : 'contracts');
+
+  // Contracts / lots
+  if (units < 1) {
+    cEl.textContent = '0'; cEl.className = 'out-value big'; cEl.style.color = 'var(--red)';
+    cSub.textContent = 'Reduce SL or increase risk';
+    warn.innerHTML = `⚠ Even 1 ${isForex?'lot':'contract'} risks ${fmt$(riskPerUnit)} — exceeds your ${fmt$(risk)} limit.`;
+    warn.style.display = 'block';
+  } else {
+    cEl.textContent = units; cEl.className = 'out-value big'; cEl.style.color = 'var(--orange)';
+    cSub.textContent = `${units} ${unitWord}`;
+    warn.style.display = 'none';
+  }
+
+  // Actual risk
+  rEl.textContent = fmt$(actualRisk); rEl.className = 'out-value med';
+  rEl.style.color = actualRisk <= risk ? 'var(--green)' : 'var(--red)';
+  const saved = risk - actualRisk;
+  rSub.textContent = saved > 0 ? `${fmt$(saved)} under limit` : 'at limit';
+
+  // $ per point/pip
+  dEl.textContent = fmt$(dpp, 2); dEl.className = 'out-value med'; dEl.style.color = 'var(--text-bright)';
+  dSub.textContent = `${units} × $${pv}/${isForex?(activeInstrument?.slUnit||'pip'):'pt'}`;
+
+  // % of account
+  if (acctSz && acctSz > 0) {
+    const pct = (actualRisk / acctSz) * 100;
+    pEl.textContent = pct.toFixed(2) + '%'; pEl.className = 'out-value med';
+    pEl.style.color = pct > 2 ? 'var(--red)' : pct > 1 ? 'var(--amber)' : 'var(--green)';
+    pSub.textContent = 'of account';
+  } else {
+    pEl.textContent = '—'; pEl.className = 'out-value med empty';
+    pSub.textContent = 'Enter account size';
+  }
+
+  // ── Take Profit ──
+  if (tp && tp > 0 && units > 0) {
+    const rr       = tp / sl;
+    const profit   = units * tp * pv;
+    const beMove   = actualRisk / (units * pv);
+
+    rrEl.textContent = fmtRR(rr); rrEl.className = 'out-value med'; rrEl.style.color = 'var(--green)';
+    rrSub.textContent = rr >= 2 ? '✓ Good R:R' : rr >= 1 ? '~ Minimum R:R' : '✗ R:R < 1:1';
+    rrSub.style.color = rr >= 2 ? 'var(--green)' : rr >= 1 ? 'var(--amber)' : 'var(--red)';
+
+    prEl.textContent = fmt$(profit); prEl.className = 'out-value med'; prEl.style.color = 'var(--green)';
+    prSub.textContent = `${units} ${unitWord} × ${tp} pts × $${pv}`;
+
+    beEl.textContent = beMove.toFixed(2) + (isForex?' pips':' pts'); beEl.className = 'out-value med'; beEl.style.color = 'var(--green)';
+    beSub.textContent = `Move needed to cover commissions`;
+  } else {
+    [rrEl, prEl, beEl].forEach(e => { e.textContent = '—'; e.className = 'out-value med empty'; });
+    [rrSub, prSub, beSub].forEach(e => e.textContent = '');
+  }
+
+  highlightRef(sl);
+}
+
+// ════════════════════════════════════════════════
+// REFERENCE TABLE
+// ════════════════════════════════════════════════
+
+function buildRefTable() {
+  if (!activeInstrument) return;
+  const inst  = activeInstrument;
+  const pv    = isForex ? effectivePipValue(inst) : inst.pv;
+  const rows  = inst.refRows;
+  const cols  = isForex ? [0.01, 0.05, 0.1, 0.25, 0.5, 1] : [1, 2, 3, 5, 10];
+  const colLabels = isForex
+    ? cols.map(c => c < 0.1 ? c+'L' : c+'L')
+    : cols.map(c => c + (c===1?' Contract':' Contracts'));
+  const unitLabel = isForex ? (inst.slUnit||'pips') : 'pts';
+
+  // thead
+  document.getElementById('ref-thead').innerHTML =
+    '<tr><th>'+inst.refLabel+'</th>' + colLabels.map(l => `<th>${l}</th>`).join('') + '</tr>';
+
+  // tbody
+  document.getElementById('ref-tbody').innerHTML = rows.map(sl => {
+    const cells = cols.map(n => {
+      const r = sl * pv * n;
+      return `<td>${fmt$(r, r < 1 ? 2 : 0)}</td>`;
+    }).join('');
+    return `<tr data-sl="${sl}"><td>${sl}</td>${cells}</tr>`;
+  }).join('');
+}
+
+function highlightRef(sl) {
+  document.querySelectorAll('#ref-tbody tr').forEach(row => {
+    const match = Math.abs(parseFloat(row.dataset.sl) - sl) < 0.001;
+    row.classList.toggle('row-highlight', match);
+  });
+}
+
+// ════════════════════════════════════════════════
+// LOT SIZE & ACCOUNT CURRENCY TOGGLES (Forex)
+// ════════════════════════════════════════════════
+
+document.getElementById('lot-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('.toggle-btn');
+  if (!btn) return;
+  lotSize = parseInt(btn.dataset.lot);
+  document.querySelectorAll('#lot-toggle .toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
+  if (activeInstrument && isForex) selectInstrument(activeInstrument.id, true);
+});
+
+document.getElementById('acct-toggle').addEventListener('click', e => {
+  const btn = e.target.closest('.toggle-btn');
+  if (!btn) return;
+  acctCurrency = btn.dataset.acct;
+  document.querySelectorAll('#acct-toggle .toggle-btn').forEach(b => b.classList.toggle('active', b === btn));
+  if (activeInstrument && isForex) selectInstrument(activeInstrument.id, true);
+});
+
+// ════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════
+
+buildGrids();
+</script>
+</body>
+</html>
