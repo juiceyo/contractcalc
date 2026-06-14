@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ContractCalc — Position Size Calculator</title>
+<title>ContractCalc - Position Size Calculator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -404,14 +404,14 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 
   <!-- ── Active instrument display ── -->
   <div id="active-display">
-    <div class="active-name" id="ad-name">—</div>
+    <div class="active-name" id="ad-name">-</div>
     <div class="active-meta" id="ad-meta"></div>
   </div>
 
   <!-- ── Calculator (shown once instrument selected) ── -->
   <div class="calc-card" id="calc-card">
     <div class="calc-header">
-      <div class="calc-header-title">Risk Calculator — <span id="ch-title">Select an instrument</span></div>
+      <div class="calc-header-title">Risk Calculator - <span id="ch-title">Select an instrument</span></div>
     </div>
     <div class="calc-body">
 
@@ -442,22 +442,22 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
       <div class="output-strip">
         <div class="out-box">
           <div class="out-label" id="o-contracts-label">Contracts</div>
-          <div class="out-value big empty" id="o-contracts">—</div>
+          <div class="out-value big empty" id="o-contracts">-</div>
           <div class="out-sub" id="o-contracts-sub"></div>
         </div>
         <div class="out-box">
           <div class="out-label">Actual Risk</div>
-          <div class="out-value med empty" id="o-risk">—</div>
+          <div class="out-value med empty" id="o-risk">-</div>
           <div class="out-sub" id="o-risk-sub"></div>
         </div>
         <div class="out-box">
           <div class="out-label" id="o-dpp-label">$ / Point</div>
-          <div class="out-value med empty" id="o-dpp">—</div>
+          <div class="out-value med empty" id="o-dpp">-</div>
           <div class="out-sub" id="o-dpp-sub"></div>
         </div>
         <div class="out-box">
           <div class="out-label">Risk %</div>
-          <div class="out-value med empty" id="o-pct">—</div>
+          <div class="out-value med empty" id="o-pct">-</div>
           <div class="out-sub" id="o-pct-sub">of max risk</div>
         </div>
       </div>
@@ -486,17 +486,17 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
       <div class="tp-strip" id="tp-strip">
         <div class="tp-box">
           <div class="out-label" style="color:rgba(81,207,102,0.6);">R:R Ratio</div>
-          <div class="out-value med empty" id="o-rr" style="color:var(--green);">—</div>
+          <div class="out-value med empty" id="o-rr" style="color:var(--green);">-</div>
           <div class="out-sub" id="o-rr-sub"></div>
         </div>
         <div class="tp-box">
           <div class="out-label" style="color:rgba(81,207,102,0.6);">Profit Target</div>
-          <div class="out-value med empty" id="o-profit" style="color:var(--green);">—</div>
+          <div class="out-value med empty" id="o-profit" style="color:var(--green);">-</div>
           <div class="out-sub" id="o-profit-sub"></div>
         </div>
         <div class="tp-box">
           <div class="out-label" style="color:rgba(81,207,102,0.6);">Breakeven Move</div>
-          <div class="out-value med empty" id="o-be" style="color:var(--green);">—</div>
+          <div class="out-value med empty" id="o-be" style="color:var(--green);">-</div>
           <div class="out-sub" id="o-be-sub"></div>
         </div>
       </div>
@@ -507,7 +507,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
   <!-- ── Reference Table ── -->
   <div class="calc-card" id="ref-card">
     <div class="calc-header">
-      <div class="calc-header-title">Quick Reference — <span id="ref-title">Risk per unit</span></div>
+      <div class="calc-header-title">Quick Reference - <span id="ref-title">Risk per unit</span></div>
     </div>
     <div class="calc-body" style="padding: 0;">
       <div class="ref-wrap">
@@ -530,7 +530,7 @@ body { background: var(--bg); color: var(--text); font-family: var(--sans); font
 
 <!-- ── Footer ── -->
 <div id="footer">
-  ContractCalc — free forever · no signup · always free ·
+  ContractCalc - free forever · no signup · no fluff ·
   <a href="https://ko-fi.com/juiced_" target="_blank" rel="noopener">☕ Buy me a coffee if it saved you a bad trade</a>
 </div>
 
@@ -570,7 +570,7 @@ const FUTURES = [
 // Forex pip values are per standard lot (100,000 units), USD account
 // For pairs where USD is quote: pip = 0.0001 * 100,000 = $10
 // For pairs where USD is base (USDXXX): pip ≈ varies; approximated
-// For JPY pairs: pip = 0.01 * 100,000 / rate — we use ~$9.09 at ~110 rate (approximate, standard)
+// For JPY pairs: pip = 0.01 * 100,000 / rate - we use ~$9.09 at ~110 rate (approximate, standard)
 // For metals (XAU/XAG): pip = $1 per lot per $1 move on XAU, 0.01 on XAG
 
 const FOREX = [
@@ -707,7 +707,7 @@ function selectInstrument(id, forex) {
   `;
 
   // update calculator header
-  document.getElementById('ch-title').textContent = activeInstrument.name + ' — ' + activeInstrument.full;
+  document.getElementById('ch-title').textContent = activeInstrument.name + ' - ' + activeInstrument.full;
   document.getElementById('ref-title').textContent = `Risk per ${isForex ? 'lot' : 'contract'} (${activeInstrument.name})`;
 
   // SL unit labels
@@ -764,7 +764,7 @@ function calc() {
   const beSub = document.getElementById('o-be-sub');
 
   const clearAll = () => {
-    [cEl, rEl, dEl, pEl, rrEl, prEl, beEl].forEach(e => { e.textContent = '—'; e.className = e.className.replace(/\bempty\b/,'') + ' empty'; });
+    [cEl, rEl, dEl, pEl, rrEl, prEl, beEl].forEach(e => { e.textContent = '-'; e.className = e.className.replace(/\bempty\b/,'') + ' empty'; });
     [cSub, rSub, dSub, pSub, rrSub, prSub, beSub].forEach(e => e.textContent = '');
     warn.style.display = 'none';
   };
@@ -781,7 +781,7 @@ function calc() {
   if (units < 1) {
     cEl.textContent = '0'; cEl.className = 'out-value big'; cEl.style.color = 'var(--red)';
     cSub.textContent = 'Reduce SL or increase risk';
-    warn.innerHTML = `⚠ Even 1 ${isForex?'lot':'contract'} risks ${fmt$(riskPerUnit)} — exceeds your ${fmt$(risk)} limit.`;
+    warn.innerHTML = `⚠ Even 1 ${isForex?'lot':'contract'} risks ${fmt$(riskPerUnit)} - exceeds your ${fmt$(risk)} limit.`;
     warn.style.display = 'block';
   } else {
     cEl.textContent = units; cEl.className = 'out-value big'; cEl.style.color = 'var(--orange)';
@@ -806,7 +806,7 @@ function calc() {
     pEl.style.color = pct > 2 ? 'var(--red)' : pct > 1 ? 'var(--amber)' : 'var(--green)';
     pSub.textContent = 'of account';
   } else {
-    pEl.textContent = '—'; pEl.className = 'out-value med empty';
+    pEl.textContent = '-'; pEl.className = 'out-value med empty';
     pSub.textContent = 'Enter account size';
   }
 
@@ -826,7 +826,7 @@ function calc() {
     beEl.textContent = beMove.toFixed(2) + (isForex?' pips':' pts'); beEl.className = 'out-value med'; beEl.style.color = 'var(--green)';
     beSub.textContent = `Move needed to cover commissions`;
   } else {
-    [rrEl, prEl, beEl].forEach(e => { e.textContent = '—'; e.className = 'out-value med empty'; });
+    [rrEl, prEl, beEl].forEach(e => { e.textContent = '-'; e.className = 'out-value med empty'; });
     [rrSub, prSub, beSub].forEach(e => e.textContent = '');
   }
 
